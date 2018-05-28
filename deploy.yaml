@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moodle-db-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moodle-db
+  template:
+    metadata:
+      labels:
+        app: moodle-db
+    spec:
+      containers:
+      - name: moodle-db-container
+        image: bitnami/mariadb:latest
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MARIADB_USER
+          value: "bn_moodle"
+        - name: MARIADB_DATABASE
+          value: "bitnami_moodle"
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moodle-db-svc
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: moodle-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moodle-app-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moodle-app
+  template:
+    metadata:
+      labels:
+        app: moodle-app
+    spec:
+      containers:
+      - name: moodle-app-container
+        image: bitnami/moodle:3.4.2
+        ports:
+        - containerPort: 80
+        env:
+        - name: MARIADB_HOST
+          value: "moodle-db-svc"
+        - name: MARIADB_PORT_NUMBER
+          value: "3306"
+        - name: MOODLE_DATABASE_USER
+          value: "bn_moodle"
+        - name: MOODLE_DATABASE_NAME
+          value: "bitnami_moodle"
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moodle-app-svc
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: moodle-app
